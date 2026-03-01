@@ -1,9 +1,12 @@
 <script>
 </script>
 
-<h1>Kies een band</h1>
+<h1>Raynauld's Private Setlist App!</h1>
 
 <div>
+	<a href="/band/3/nummers">
+		<button>Phoenix</button>
+	</a>
 	<a href="/band/1/nummers">
 		<button>De Juiste Deuntjes</button>
 	</a>

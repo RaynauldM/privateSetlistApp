@@ -107,11 +107,21 @@
 		await loadSetlist();
 	}
 
+	async function clearSetlist() {
+		if (!confirm('Weet je zeker dat je de hele setlist wilt leegmaken?')) {
+			return;
+		}
+
+		await supabase.from('setlist_items').delete().eq('setlist_id', setlistId);
+
+		await loadSetlist();
+	}
+
 	onMount(loadSetlist);
 </script>
 
 <h1>Setlist</h1>
-
+<button on:click={clearSetlist} style="margin-bottom: 1rem;"> Setlist leegmaken </button>
 <ol>
 	{#each setlist as item, i}
 		<li>
