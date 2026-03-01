@@ -1,15 +1,61 @@
 <script>
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabaseClient';
+	import { page } from '$app/stores';
 
-	const BAND_ID = 1;
 	let setlist = [];
+	let setlistId = null;
+
+	// bandId uit URL halen
+	$: bandId = Number($page.params.bandId);
+
+	// Zorgt dat er altijd een setlist bestaat voor deze band
+	async function ensureSetlist() {
+		const { data, error } = await supabase
+			.from('setlists')
+			.select('id')
+			.eq('band_id', bandId)
+			.limit(1)
+			.maybeSingle(); // voorkomt 406 error
+
+		if (error) {
+			console.error('Setlist fetch error:', error);
+			return;
+		}
+
+		// Bestaat al
+		if (data) {
+			setlistId = data.id;
+			return;
+		}
+
+		// Anders nieuwe maken
+		const { data: newSetlist, error: insertError } = await supabase
+			.from('setlists')
+			.insert({
+				band_id: bandId,
+				name: 'Actieve setlist'
+			})
+			.select()
+			.single();
+
+		if (insertError) {
+			console.error('Setlist creation error:', insertError);
+			return;
+		}
+
+		setlistId = newSetlist.id;
+	}
 
 	async function loadSetlist() {
+		await ensureSetlist();
+
+		if (!setlistId) return;
+
 		const { data, error } = await supabase
 			.from('setlist_items')
 			.select('id, position, songs(id, song, artist)')
-			.eq('band_id', BAND_ID)
+			.eq('setlist_id', setlistId)
 			.order('position', { ascending: true });
 
 		if (error) {
@@ -20,22 +66,16 @@
 		setlist = data ?? [];
 	}
 
-	// --- HIER GEBEURT HET ECHTE OMDRAAIEN IN DE DB ---
 	async function swapPositions(itemA, itemB) {
-		// 1) bewaar oude posities
 		const posA = itemA.position;
 		const posB = itemB.position;
 
-		// 2) schrijf eerst A naar tijdelijke positie
 		await supabase.from('setlist_items').update({ position: -999 }).eq('id', itemA.id);
 
-		// 3) zet B op A z'n plek
 		await supabase.from('setlist_items').update({ position: posA }).eq('id', itemB.id);
 
-		// 4) zet A op B z'n plek
 		await supabase.from('setlist_items').update({ position: posB }).eq('id', itemA.id);
 
-		// 5) daarna opnieuw laden
 		await loadSetlist();
 	}
 
@@ -51,6 +91,7 @@
 
 	async function removeFromSetlist(id) {
 		await supabase.from('setlist_items').delete().eq('id', id);
+
 		await loadSetlist();
 
 		// netjes hernummeren
