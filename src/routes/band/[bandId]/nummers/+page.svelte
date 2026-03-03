@@ -59,8 +59,15 @@
 	// ----------------------
 
 	async function deleteSong(id) {
-		await supabase.from('songs').delete().eq('id', id);
-		await loadSongs();
+		const { error } = await supabase.from('songs').delete().eq('id', id);
+
+		if (error) {
+			console.error('Delete error:', error);
+			return;
+		}
+
+		// direct UI updaten
+		songs = songs.filter((s) => s.id !== id);
 	}
 
 	// ----------------------

@@ -1,17 +1,28 @@
 <script>
+	import { supabase } from '$lib/supabaseClient';
+	import { onMount } from 'svelte';
+
+	let bands = [];
+
+	onMount(async () => {
+		const {
+			data: { user }
+		} = await supabase.auth.getUser();
+
+		const { data } = await supabase
+			.from('band_members')
+			.select('bands(id, name)')
+			.eq('user_id', user.id)
+			.eq('active', true);
+
+		bands = data.map((d) => d.bands);
+	});
 </script>
 
-<h1>Raynauld's Private Setlist App!</h1>
+<h1>Kies een band</h1>
 
-<div>
-	<a href="/band/3/nummers">
-		<button>Phoenix</button>
+{#each bands as band}
+	<a href={`/band/${band.id}/nummers`}>
+		<button>{band.name}</button>
 	</a>
-	<a href="/band/1/nummers">
-		<button>De Juiste Deuntjes</button>
-	</a>
-
-	<a href="/band/2/nummers">
-		<button>One Love</button>
-	</a>
-</div>
+{/each}
